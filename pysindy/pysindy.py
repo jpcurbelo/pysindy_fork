@@ -34,6 +34,9 @@ from .utils import validate_control_variables
 from .utils import validate_input
 from .utils import validate_no_reshape
 
+# jpcurbelo
+import sympy as sp
+
 
 class SINDy(BaseEstimator):
     """
@@ -381,6 +384,33 @@ class SINDy(BaseEstimator):
                     print(names + " = " + eqn)
             else:
                 print(lhs[i] + " = " + eqn)
+                
+    def print_sp(self, lhs=None, precision=3):
+        """Print the SINDy model equations using SymPy representation.
+
+        Parameters
+        ----------
+        lhs: list of strings, optional (default None)
+            List of variables to print on the left-hand sides of the learned equations.
+            By default :code:`self.input_features` are used.
+
+        precision: int, optional (default 3)
+            Precision to be used when printing out model coefficients.
+        """
+        eqns = self.equations(precision)
+        if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
+            feature_names = self.get_feature_names()
+        else:
+            feature_names = self.feature_names
+        sym_eqns = [sp.sympify(eqn) for eqn in eqns]
+        if lhs is None:
+            lhs = feature_names
+        for i, (lhs_i, eqn) in enumerate(zip(lhs, sym_eqns)):
+            if self.discrete_time:
+                lhs_str = "(" + lhs_i + ")[k+1]"
+            else:
+                lhs_str = lhs_i
+            print(lhs_str + " = " + sp.pretty(eqn))
 
     def score(self, x, t=None, x_dot=None, u=None, metric=r2_score, **metric_kws):
         """
