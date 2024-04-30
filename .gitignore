@@ -1,3 +1,8 @@
+## jpcurbelo
+# Files 
+simlab_experiments/data/*
+
+
 build
 dist
 *.egg-info
