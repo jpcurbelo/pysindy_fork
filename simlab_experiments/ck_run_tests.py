@@ -38,7 +38,7 @@ ids_to_plot = [1, 2, 3, 10, 50, 100]
 
 # Build and fit the model
 poly_order_list = [2, 3]
-threshold = [1e-5, 1e-10]
+threshold_list = [1e-5, 1e-10]
 dt = 1
 
 def main(system_size, n_samples_train, poly_order, threshold,  save_folder='ck_experiments'):
@@ -141,14 +141,19 @@ if __name__ == '__main__':
     if not os.path.exists(exp_folder):
         os.makedirs(exp_folder)
     
-    for system_size in system_size_list:
-        for n_samples_train in n_samples_train_list:
-            for poly_order in poly_order_list:
-                for th in threshold:
+    for ss in system_size_list:
+        for st in n_samples_train_list:
+            for po in poly_order_list:
+                for th in threshold_list:
                     # Get time in format YYMMDD_HHMMSS
                     current_time = datetime.now().strftime('%y%m%d_%H%M%S')
                     save_folder = os.path.join(exp_folder, f'ck_{current_time}')
                     if not os.path.exists(save_folder):
                         os.makedirs(save_folder)
                     
-                    main(system_size, n_samples_train, poly_order, th, save_folder)
+                    main(system_size=ss,
+                        n_samples_train=st,
+                        poly_order=po,
+                        threshold=th,
+                        save_folder=save_folder
+                    )
