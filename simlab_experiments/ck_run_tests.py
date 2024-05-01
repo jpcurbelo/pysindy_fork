@@ -25,7 +25,7 @@ np.random.seed(1000)  # Seed for reproducibility
 integrator_keywords = {}
 integrator_keywords['method'] = 'RK23'   #'LSODA'
 integrator_keywords['rtol'] = 1e-3
-integrator_keywords['atol'] = 1e-6
+integrator_keywords['atol'] = 1e-4
 
 experiment_dir = 'data'
 experiment_file = 'Population_Training_Results.dat'
@@ -39,9 +39,13 @@ ids_to_plot = [1, 2, 3, 10, 50, 100]
 # Build and fit the model
 poly_order_list = [2, 3]
 threshold_list = [1e-5, 1e-10]
-dt = 1
+# dt = 1
 
 def main(system_size, n_samples_train, poly_order, threshold,  save_folder='ck_experiments'):
+    
+    print('#'*100)
+    print(f"Running SINDy for system size {system_size}, n_samples_train {n_samples_train}, poly_order {poly_order}, threshold {threshold}")
+    print('#'*100)
     
     # Save json file with the parameters
     params = {
@@ -62,16 +66,24 @@ def main(system_size, n_samples_train, poly_order, threshold,  save_folder='ck_e
     # Save the parameters as a single JSON object
     with open(os.path.join(save_folder, 'params.json'), 'w') as f:
         json.dump(params, f, indent=4)
+        
+        
     
+    print('1. Preparing the data...') 
     # Load experimental data
     t_values, N_clusters = readExpData(exp_dir, Nsize=system_size)
     
-    # n_samples_train random indices
-    indices = np.random.choice(len(t_values), n_samples_train, replace=False)
-    indices = np.sort(indices)
+    # # n_samples_train random indices
+    # indices = np.random.choice(len(t_values), n_samples_train, replace=False)
+    # indices = np.sort(indices)
+    # Linearly spaced indices
+    indices = np.linspace(0, len(t_values)-1, n_samples_train, dtype=int)
     N_clusters_train = N_clusters[indices]
     # t_values_train = t_values[indices]
+    # Time step from indices
+    dt = t_values[1] - t_values[0]
 
+    print('2. Fitting the model...')
     model = ps.SINDy( 
         optimizer=ps.STLSQ(threshold=threshold),
         feature_library=ps.PolynomialLibrary(degree=poly_order),
@@ -80,9 +92,11 @@ def main(system_size, n_samples_train, poly_order, threshold,  save_folder='ck_e
         
     model.save(save_folder, precision=4)
     
+    print('3. Simulating the model...')
     # Simulate the model
     n_sim, t_sim = model.simulate(N_clusters[0], t=t_values[:n_samples_test], integrator_kws=integrator_keywords)
     
+    print('4. Plotting the results...')
     # Create subplot grid
     fig, axs = plt.subplots(3, 2, figsize=(12, 10))
 
