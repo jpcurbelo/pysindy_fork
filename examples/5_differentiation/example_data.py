@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from pysindy.utils import linear_damped_SHO
+from pysindy.pysindy.utils import linear_damped_SHO
 from pysindy.utils import lorenz
 
 n_spectral = 8

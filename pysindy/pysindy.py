@@ -1,4 +1,5 @@
 import sys
+import os
 import warnings
 from itertools import product
 from typing import Collection
@@ -384,6 +385,41 @@ class SINDy(BaseEstimator):
                     print(names + " = " + eqn)
             else:
                 print(lhs[i] + " = " + eqn)
+      
+    def save(self, path, lhs=None, precision=3):
+        """Save the SINDy model equations to a text file.
+
+        Parameters
+        ----------
+        path : str
+            The path where the equations will be saved.
+        lhs : list of strings, optional (default None)
+            List of variables to print on the left-hand sides of the learned equations.
+            By default :code:`self.input_features` are used.
+        precision : int, optional (default 3)
+            Precision to be used when printing out model coefficients.
+        """
+        eqns = self.equations(precision)
+        if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
+            feature_names = self.get_feature_names()
+        else:
+            feature_names = self.feature_names
+        
+        with open(os.path.join(path, 'equations.txt'), 'w') as file:
+            for i, eqn in enumerate(eqns):
+                if self.discrete_time:
+                    names = "(" + feature_names[i] + ")"
+                    file.write(names + "[k+1] = " + eqn + '\n')
+                elif lhs is None:
+                    if not sindy_pi_flag or not isinstance(self.optimizer, SINDyPI):
+                        names = "(" + feature_names[i] + ")"
+                        file.write(names + "' = " + eqn + '\n')
+                    else:
+                        names = feature_names[i]
+                        file.write(names + " = " + eqn + '\n')
+                else:
+                    file.write(lhs[i] + " = " + eqn + '\n')
+      
                 
     def print_sp(self, lhs=None, precision=3):
         """Print the SINDy model equations using SymPy representation.
@@ -398,6 +434,9 @@ class SINDy(BaseEstimator):
             Precision to be used when printing out model coefficients.
         """
         eqns = self.equations(precision)
+        
+        print('eqns:', eqns)
+        
         if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
             feature_names = self.get_feature_names()
         else:
@@ -656,6 +695,10 @@ class SINDy(BaseEstimator):
         x: numpy array, shape (n_samples, n_features)
             Simulation results
         """
+        
+        # print('integrator_kws:', integrator_kws)
+        
+        
         check_is_fitted(self, "model")
         if u is None and self.n_control_features_ > 0:
             raise TypeError("Model was fit using control variables, so u is required")
@@ -746,9 +789,10 @@ class SINDy(BaseEstimator):
             # Need to hard-code below, because odeint and solve_ivp
             # have different syntax and integration options.
             if integrator == "solve_ivp":
-                return (
-                    (solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)).y
-                ).T
+                
+                sol = solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)
+                
+                return (sol.y.T, sol.t)
             elif integrator == "odeint":
                 if integrator_kws.get("method") == "LSODA":
                     integrator_kws = {}
