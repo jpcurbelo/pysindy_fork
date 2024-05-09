@@ -6,3 +6,4 @@ sympy
 scikit-learn
 derivative
 cvxpy
+setuptools

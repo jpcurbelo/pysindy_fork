@@ -20,7 +20,6 @@ from .feature_library import PolynomialLibrary
 
 try:  # Waiting on PEP 690 to lazy import CVXPY
     from .optimizers import SINDyPI
-
     sindy_pi_flag = True
 except ImportError:
     sindy_pi_flag = False
@@ -419,8 +418,7 @@ class SINDy(BaseEstimator):
                         file.write(names + " = " + eqn + '\n')
                 else:
                     file.write(lhs[i] + " = " + eqn + '\n')
-      
-                
+              
     def print_sp(self, lhs=None, precision=3):
         """Print the SINDy model equations using SymPy representation.
 
@@ -642,7 +640,10 @@ class SINDy(BaseEstimator):
         integrator="solve_ivp",
         stop_condition=None,
         interpolator=None,
-        integrator_kws={"method": "LSODA", "rtol": 1e-12, "atol": 1e-12},
+        integrator_kws={"method": "LSODA", 
+                        "rtol": 1e-12, "atol": 1e-12, 
+                        "max_step": 0.1,
+                        "h_factor": 1},
         interpolator_kws={},
     ):
         """
@@ -695,9 +696,6 @@ class SINDy(BaseEstimator):
         x: numpy array, shape (n_samples, n_features)
             Simulation results
         """
-        
-        # print('integrator_kws:', integrator_kws)
-        
         
         check_is_fitted(self, "model")
         if u is None and self.n_control_features_ > 0:
@@ -788,7 +786,19 @@ class SINDy(BaseEstimator):
 
             # Need to hard-code below, because odeint and solve_ivp
             # have different syntax and integration options.
-            if integrator == "solve_ivp":
+            if integrator == "fixed_step":
+                print(integrator, integrator_kws)
+                
+                sol = fixedStepIntegrate(step_integrator_dict[integrator_kws['method']], 
+                                         rhs, t, x0, integrator_kws['h_factor'])
+                
+                print('sol:', sol)
+                print('t:', t)
+                
+                return (sol, t)
+            
+            
+            elif integrator == "solve_ivp":
                 
                 sol = solve_ivp(rhs, (t[0], t[-1]), x0, t_eval=t, **integrator_kws)
                 
@@ -947,3 +957,39 @@ def _comprehend_and_validate_inputs(x, t, x_dot, u, feature_library):
             )
         u = [comprehend_and_validate(ui, ti) for ui, ti in _zip_like_sequence(u, t)]
     return x, x_dot, u
+
+
+def RK4Step(f, t, x, h):
+    k1 = f(t, x)
+    k2 = f(t + 0.5*h, x + 0.5*h*k1)
+    k3 = f(t + 0.5*h, x + 0.5*h*k2)
+    k4 = f(t + h, x + h*k3)
+    return (k1 + 2*k2 + 2*k3 + k4) / 6
+
+def EulerStep(f, t, x, h):
+    return f(t, x) * h
+
+def RK2Step(f, t, x, h):
+    k1 = f(t, x)
+    k2 = f(t + h, x + h * k1)
+    return (k1 + k2) / 2
+
+def fixedStepIntegrate(integrator, f, t, x0, h_factor):
+    N = len(t)
+    x = [x0]
+    for k in range(N-1):
+        
+        sys.stdout.write(f'\rt: {t[k]}')
+        sys.stdout.flush()   
+        
+        h = (t[k + 1] - t[k]) / h_factor
+        v = integrator(f, t[k], x[k], h)
+        x.append(x[k] + h * v)
+        
+    return np.array(x)
+
+step_integrator_dict = {
+    "RK4": RK4Step,
+    "Euler": EulerStep,
+    "RK2": RK2Step
+}

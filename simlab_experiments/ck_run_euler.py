@@ -6,6 +6,8 @@ from datetime import datetime
 import json
 from multiprocessing import Pool
 
+from ck_utils import generate_random_word
+
 # Find current directory
 current_dir = os.getcwd()
 # Find root directory
@@ -22,35 +24,35 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 np.random.seed(1000)  # Seed for reproducibility
 
-from ck_utils import generate_random_word
-
 # Integrator keywords for solve_ivp
 integrator_keywords = {}
-integrator_keywords['method'] = 'BDF'    #'RK23'   #'LSODA'
-integrator_keywords['rtol'] = 1e-3
-integrator_keywords['atol'] = 1e-10
+integrator_keywords['method'] = 'Euler'
+integrator_keywords['h_factor'] = 1
+h_factor_list = [2, 5, 10]
 
 experiment_dir = 'data'
 experiment_file = 'Population_Training_Results.dat'
 exp_dir = os.path.join(experiment_dir, experiment_file)
-system_size_list = [50]
-n_samples_train_list = [5000, 10000]
-n_samples_test = 2000
+system_size_list = [100]
+n_samples_train_list = [10000]
+n_samples_test = 5000
 # List of IDs to plot
 ids_to_plot = [1, 2, 3, 10, 50, 100]
 
 # Build and fit the model
 poly_order_list = [2, 3]
-threshold_list = [1e-5, 1e-10, 0]
+threshold_list = [1e-4, 0]
 # dt = 1
 num_workers = 16
 
-def main(system_size, n_samples_train, poly_order, threshold,  save_folder='ck_experiments'):
+def main(system_size, n_samples_train, poly_order, threshold, h_factor,  
+         save_folder='ck_experiments'):
     
     print('#'*100)
     print(f"Running SINDy for system size {system_size}, n_samples_train {n_samples_train}, poly_order {poly_order}, threshold {threshold}")
     print('#'*100)
     
+    integrator_keywords['h_factor'] = h_factor
     # Save json file with the parameters
     params = {
         'poly_order': poly_order,
@@ -97,8 +99,10 @@ def main(system_size, n_samples_train, poly_order, threshold,  save_folder='ck_e
     model.save(save_folder, precision=4)
     
     print('3. Simulating the model...')
-    # Simulate the model
-    n_sim, t_sim = model.simulate(N_clusters[0], t=t_values[:n_samples_test], integrator_kws=integrator_keywords)
+    # # Simulate the model
+    # n_sim, t_sim = model.simulate(N_clusters[0], t=t_values[:n_samples_test], integrator_kws=integrator_keywords)
+    n_sim, t_sim = model.simulate(N_clusters[0], t=t_values[:n_samples_test], 
+                                integrator='fixed_step', integrator_kws=integrator_keywords)
     
     print('4. Plotting the results...')
     # Create subplot grid
@@ -152,33 +156,35 @@ def readExpData(file_path, Nsize=100):
         exit()
         
 def process_params(params):
-    ss, st, po, th = params
+    ss, st, po, th, hf = params
     current_time = datetime.now().strftime('%y%m%d_%H%M%S')
     rand_name = generate_random_word()
     save_folder = os.path.join(exp_folder, f'ck_{current_time}_{rand_name}')
     os.makedirs(save_folder)
-    
+
     main(system_size=ss,
-         n_samples_train=st,
-         poly_order=po,
-         threshold=th,
-         save_folder=save_folder
+        n_samples_train=st,
+        poly_order=po,
+        threshold=th,
+        h_factor=hf,
+        save_folder=save_folder,
     )
 
 
 if __name__ == '__main__':
     
     # Save the model
-    exp_folder = 'ck_experiments'
+    exp_folder = 'ck_experiments_euler'
     if not os.path.exists(exp_folder):
         os.makedirs(exp_folder)
         
         
     # Create a list of parameter combinations
-    parameter_combinations = [(ss, st, po, th) for ss in system_size_list
+    parameter_combinations = [(ss, st, po, th, hf) for ss in system_size_list
                                                 for st in n_samples_train_list
                                                 for po in poly_order_list
-                                                for th in threshold_list]  
+                                                for th in threshold_list
+                                                for hf in h_factor_list]  
     
     # Create a Pool of worker processes
     with Pool(num_workers) as pool:

@@ -1,0 +1,241 @@
+{
+    "poly_order": 2,
+    "threshold": 1e-10,
+    "system_size": 20,
+    "n_samples_train": 1000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 3,
+    "threshold": 1e-10,
+    "system_size": 20,
+    "n_samples_train": 1000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 2,
+    "threshold": 1e-10,
+    "system_size": 20,
+    "n_samples_train": 5000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 2,
+    "threshold": 1e-10,
+    "system_size": 20,
+    "n_samples_train": 10000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 3,
+    "threshold": 1e-10,
+    "system_size": 20,
+    "n_samples_train": 10000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 3,
+    "threshold": 1e-10,
+    "system_size": 50,
+    "n_samples_train": 1000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 2,
+    "threshold": 1e-10,
+    "system_size": 50,
+    "n_samples_train": 5000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 3,
+    "threshold": 1e-10,
+    "system_size": 50,
+    "n_samples_train": 10000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 2,
+    "threshold": 1e-10,
+    "system_size": 100,
+    "n_samples_train": 1000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 3,
+    "threshold": 1e-10,
+    "system_size": 100,
+    "n_samples_train": 1000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
+
+{
+    "poly_order": 2,
+    "threshold": 1e-10,
+    "system_size": 100,
+    "n_samples_train": 5000,
+    "n_samples_test": 2000,
+    "ids_to_plot": [
+        1,
+        2,
+        3,
+        10,
+        50,
+        100
+    ],
+    "exp_dir": "data/Population_Training_Results.dat",
+    "integrator_keywords": {
+        "method": "RK23",
+        "rtol": 0.001,
+        "atol": 0.0001
+    }
+}
