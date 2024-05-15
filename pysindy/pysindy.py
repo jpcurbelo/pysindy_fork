@@ -15,15 +15,15 @@ from sklearn.metrics import r2_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
 
-from .differentiation import FiniteDifference
-from .feature_library import PolynomialLibrary
+from pysindy.differentiation import FiniteDifference
+from pysindy.feature_library import PolynomialLibrary
 
 try:  # Waiting on PEP 690 to lazy import CVXPY
     from .optimizers import SINDyPI
     sindy_pi_flag = True
 except ImportError:
     sindy_pi_flag = False
-from .optimizers import STLSQ
+from .optimizers import STLSQ, ConstrainedSR3
 from .utils import AxesArray
 from .utils import comprehend_axes
 from .utils import concat_sample_axis
@@ -419,7 +419,7 @@ class SINDy(BaseEstimator):
                 else:
                     file.write(lhs[i] + " = " + eqn + '\n')
               
-    def print_sp(self, lhs=None, precision=3):
+    def print_simpy(self, lhs=None, precision=3):
         """Print the SINDy model equations using SymPy representation.
 
         Parameters
@@ -433,21 +433,25 @@ class SINDy(BaseEstimator):
         """
         eqns = self.equations(precision)
         
-        print('eqns:', eqns)
-        
         if sindy_pi_flag and isinstance(self.optimizer, SINDyPI):
             feature_names = self.get_feature_names()
         else:
             feature_names = self.feature_names
-        sym_eqns = [sp.sympify(eqn) for eqn in eqns]
+
         if lhs is None:
             lhs = feature_names
-        for i, (lhs_i, eqn) in enumerate(zip(lhs, sym_eqns)):
-            if self.discrete_time:
-                lhs_str = "(" + lhs_i + ")[k+1]"
-            else:
-                lhs_str = lhs_i
-            print(lhs_str + " = " + sp.pretty(eqn))
+
+        for i, eqn in enumerate(eqns):
+            # Parse the equation into coefficient and variable parts
+            terms = eqn.split(' + ')
+            sym_expr = 0
+            for term in terms:
+                coeff, var = term.split(' ', 1)
+                coeff = float(coeff)
+                print(f"coeff: {coeff}, var: {var}", sp.symbols(var))
+                sym_expr += coeff * sp.symbols(var)
+            lhs_str = lhs[i] if i < len(lhs) else f'Equation {i+1}'
+            print(f"{lhs_str} = {sp.pretty(sym_expr)}")
 
     def score(self, x, t=None, x_dot=None, u=None, metric=r2_score, **metric_kws):
         """

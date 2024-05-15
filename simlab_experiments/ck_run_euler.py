@@ -28,20 +28,20 @@ np.random.seed(1000)  # Seed for reproducibility
 integrator_keywords = {}
 integrator_keywords['method'] = 'Euler'
 integrator_keywords['h_factor'] = 1
-h_factor_list = [2, 5, 10]
+h_factor_list = [10, 20]
 
 experiment_dir = 'data'
 experiment_file = 'Population_Training_Results.dat'
 exp_dir = os.path.join(experiment_dir, experiment_file)
 system_size_list = [100]
 n_samples_train_list = [10000]
-n_samples_test = 5000
+n_samples_test = 16000
 # List of IDs to plot
 ids_to_plot = [1, 2, 3, 10, 50, 100]
 
 # Build and fit the model
 poly_order_list = [2, 3]
-threshold_list = [1e-4, 0]
+threshold_list = [1e-5, 0]
 # dt = 1
 num_workers = 16
 
