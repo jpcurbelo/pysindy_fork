@@ -73,8 +73,6 @@ def main(system_size, n_samples_train, poly_order, threshold, h_factor,
     with open(os.path.join(save_folder, 'params.json'), 'w') as f:
         json.dump(params, f, indent=4)
         
-        
-    
     print('1. Preparing the data...') 
     # Load experimental data
     t_values, N_clusters = readExpData(exp_dir, Nsize=system_size)
