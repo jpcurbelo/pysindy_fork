@@ -3,6 +3,16 @@ from nltk.corpus import words
 import numpy as np
 import os
 import csv
+from pathlib import Path
+from scipy import integrate
+import numba as nb
+from numbalsoda import (
+    solve_ivp, 
+    lsoda_sig,
+    lsoda, 
+    address_as_void_pointer
+)
+from numba import types
 
 eps_value = 1e-10
 
@@ -367,6 +377,191 @@ def extract_and_save_k_values(feature_names, optimizer, output_file='kappa_value
         writer = csv.writer(csvfile)
         for k_minus, k_plus in zip(k_minus_values, k_plus_values):
             writer.writerow([k_minus, k_plus])
+
+def load_kappa_values(file_path: Path):
+
+    k_file = file_path / 'kappa_values.csv'
+
+    # Check if the file exists
+    if os.path.isfile(k_file):
+        with open(k_file, 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            k_values = list(reader)
+
+        k_minus_values = [float(k[0]) for k in k_values]
+        k_plus_values = [float(k[1]) for k in k_values]
+
+        return k_minus_values, k_plus_values
+    else:
+        print(f"Kappa values file ({k_file}) does not exist")
+        return None
+    
+
+def solve_ODE_system(c0, t_values, km, kp):
+    '''
+    Solves the ODE system for the given initial conditions and parameters
+    params: c0 - initial conditions
+            t_values_odes - time values for ODEs
+            km_guess_odes - kappa minus values
+            kp_guess_odes - kappa plus values
+            system_size - size of the system
+    returns: N_sol - solution to the ODE system
+    '''
+
+    system_size = len(km)
+    
+    def system_ODEs(clust_conc, t):
+            
+        # Initialize space for dcdt
+        dcdt = list()
+
+        kmc = km * clust_conc
+        kpc = kp * clust_conc[0] * clust_conc
+
+        # Treat first and last DEs as special cases
+        dcdt.append(np.sum(kmc[2:]) + 2 * kmc[1] - np.sum(kpc[1:]) - 2 * kp[0] * clust_conc[0]**2)
+        
+        for i in range(1, system_size-1):
+            dcdt.append(kpc[i-1] - kpc[i] - kmc[i] + kmc[i+1])
+
+        dcdt.append(-kmc[-1] - kpc[-1] + kp[-2] * clust_conc[0] * clust_conc[-2])
+        
+        return dcdt
+    
+    ## Solve ODE system
+    N_sol = integrate.odeint(system_ODEs, c0, t_values, rtol=eps_value, atol=eps_value, mxstep=5000)
+    
+    return N_sol
+
+
+# This function will solve the ODE system using numbalsoda
+def solve_ODE_system_numbalsoda(u0, t_values, km, kp):
+
+    ###################################################################
+    def rhs_numbalsoda(t, u, du, p):
+        system_size = len(p.km)
+
+        kmc = p.km * u
+        kpc = p.kp * u[0] * u
+
+        # Treat first and last DEs as special cases
+        du[0] = np.sum(kmc[2:]) + 2 * kmc[1] - np.sum(kpc[1:]) - 2 * p.kp[0] * u[0]**2
+        
+        for i in range(1, system_size-1):
+            du[i] = kpc[i-1] - kpc[i] - kmc[i] + kmc[i+1]
+
+        du[-1] = -kmc[-1] - kpc[-1] + p.kp[-2] * u[0] * u[-2]
+
+    # def rhs_numbalsoda(t, u, du, km, kp):
+    #     system_size = len(km)
+
+    #     print('km:', km)
+    #     print('kp:', kp)
+    #     print('u:', u)
+    #     print('du:', du)
+
+    #     kmc = km * u
+    #     kpc = kp * u[0] * u
+
+    #     # Treat first and last DEs as special cases
+    #     du[0] = np.sum(kmc[2:]) + 2 * kmc[1] - np.sum(kpc[1:]) - 2 * kp[0] * u[0]**2
+        
+    #     for i in range(1, system_size-1):
+    #         du[i] = kpc[i-1] - kpc[i] - kmc[i] + kmc[i+1]
+
+    #     du[-1] = -kmc[-1] - kpc[-1] + kp[-2] * u[0] * u[-2]
+
+
+    ## use numba.types.Record.make_c_struct to build a c structure.
+    ## km_p and kp_p are pointers to the arrays of kappa values
+    ## km_len and kp_len are the lengths of the arrays
+    args_dtype = types.Record.make_c_struct([
+        ('km_p', types.uintp),
+        ('km_len', types.int64),
+        ('kp_p', types.uintp),
+        ('kp_len', types.int64),
+    ])
+
+    # This will be a class for our user data
+    spec = [
+        ('km', types.double[:]),
+        ('kp', types.double[:]),
+    ]
+
+    @nb.experimental.jitclass(spec)
+    class UserData():
+        
+        def __init__(self):    
+            pass
+            
+        def make_args_dtype(self):
+            args = np.zeros(1, dtype=args_dtype)
+            args[0][0] = self.km.ctypes.data
+            args[0][1] = self.km.shape[0]
+            args[0][2] = self.kp.ctypes.data
+            args[0][3] = self.kp.shape[0]
+            return args
+        
+        def unpack_pointer(self, user_data_p):
+            # Takes in pointer, and unpacks it
+            user_data = nb.carray(user_data_p, 1)[0]
+            self.km = nb.carray(address_as_void_pointer(user_data.km_p), (user_data.km_len,), dtype=np.float64)
+            self.kp = nb.carray(address_as_void_pointer(user_data.kp_p), (user_data.kp_len,), dtype=np.float64)
+
+    # this function will create the numba function to pass to lsoda.
+    def create_jit_fcns(rhs, args_dtype, system_size):
+        jitted_rhs = nb.njit(rhs)
+        @nb.cfunc(types.void(types.double,
+                types.CPointer(types.double),
+                types.CPointer(types.double),
+                types.CPointer(args_dtype)))
+        def wrapped_rhs(t, u, du, user_data_p):
+
+            u_array = nb.carray(u, (system_size,), dtype=np.float64)
+            du_array = nb.carray(du, (system_size,), dtype=np.float64)
+            p = UserData()
+            p.unpack_pointer(user_data_p)
+            jitted_rhs(t, u_array, du_array, p)
+
+            # user_data = nb.carray(user_data_p, 1)
+            # km = nb.carray(address_as_void_pointer(user_data[0].km_p), (user_data[0].km_len,), dtype=np.float64)
+            # kp = nb.carray(address_as_void_pointer(user_data[0].kp_p), (user_data[0].kp_len,), dtype=np.float64)
+            # jitted_rhs(t, u, du, km, kp)
+        
+        return wrapped_rhs
+    ###################################################################
+
+    system_size = len(km)
+    
+    p = UserData()
+    p.km = np.ascontiguousarray(km)
+    p.kp = np.ascontiguousarray(kp)
+    args = p.make_args_dtype()
+
+    # km = np.ascontiguousarray(km)
+    # kp = np.ascontiguousarray(kp)
+    # args = np.array([(km.ctypes.data, km.shape[0], kp.ctypes.data, kp.shape[0])], 
+    #                 dtype=args_dtype)
+
+    # Create the function to be called
+    rhs_cfunc = create_jit_fcns(rhs_numbalsoda, args_dtype, system_size)
+
+    funcptr = rhs_cfunc.address
+    
+    # Solve ODE system
+    t_eval = np.array(t_values)
+    t_span = np.array([min(t_eval), max(t_eval)])
+    sol = solve_ivp(funcptr, t_span, u0, 
+                    t_eval=t_eval, data=args.ctypes.data, 
+                    # rtol=eps_value, atol=eps_value
+                    rtol=1e-3, atol=1e-10
+                )
+
+    # # u0 = np.ascontiguousarray(u0)
+    # sol, success = lsoda(funcptr, u0, t_eval, data = args,
+    #                      rtol=eps_value, atol=eps_value)
+
+    return sol.y
 
 
 if __name__ == '__main__':

@@ -796,8 +796,8 @@ class SINDy(BaseEstimator):
                 sol = fixedStepIntegrate(step_integrator_dict[integrator_kws['method']], 
                                          rhs, t, x0, integrator_kws['h_factor'])
                 
-                print('sol:', sol)
-                print('t:', t)
+                # print('sol:', sol)
+                # print('t:', t)
                 
                 return (sol, t)
             

@@ -36,9 +36,9 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 np.random.seed(1000)  # Seed for reproducibility
 
-system_size_list = [50, 100]
+system_size_list = [50]
 # system_size_list = [5, 10, 20]
-n_samples_train_list = [100, 5000, 10000, 16000]
+n_samples_train_list = [1000, 5000, 10000, 16000]
 regularizer_list = ['l1', 'l2']
 poly_order = 2
 
@@ -46,7 +46,7 @@ experiment_dir = 'data'
 experiment_file = 'Population_Training_Results.dat'
 exp_dir = os.path.join(experiment_dir, experiment_file)
 
-num_workers = 8
+num_workers = 2
 exp_folder = 'ck_experiments_constrained'
 
 def main(system_size, n_samples_train, regularizer, save_folder='ck_experiments'):
@@ -85,7 +85,9 @@ def main(system_size, n_samples_train, regularizer, save_folder='ck_experiments'
         run_cvxpy = False
         print("No CVXPY package is installed")
 
+    print("Starting inequality constraints...", save_folder)
     constraint_lhs, constraint_rhs = ck_constraints(N_clusters_train, feature_names)
+    print("Done building inequality constraints...", save_folder)
 
     ## Build and fit the model
     smoothed_fd = SmoothedFiniteDifference(smoother_kws={'window_length': 5})
@@ -97,7 +99,7 @@ def main(system_size, n_samples_train, regularizer, save_folder='ck_experiments'
         constraint_lhs=constraint_lhs,
         inequality_constraints=True,  # Ensure this is True for inequality constraints
         thresholder=regularizer,
-        tol=1e-7,
+        tol=1e-12,
         threshold=1e-12,
         max_iter=100000,
     )
@@ -113,6 +115,8 @@ def main(system_size, n_samples_train, regularizer, save_folder='ck_experiments'
             feature_library=feature_library,
         )
         model.fit(N_clusters_train, t=dt)
+
+    print("Model fitted...", save_folder)
 
     ## Save the model
     model.save(save_folder, precision=6)
